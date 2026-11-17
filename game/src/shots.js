@@ -23,7 +23,7 @@ function nearestEnemy(state, x, y) {
 }
 
 /** A warden at the keys: guard a ring around the Tree, shoot the closest threat, dash out of a swarm. */
-function pilotIntent(state, tired, stepCount) {
+function pilotIntent(state, tired, stepCount, range = 620) {
   const p = state.player;
   const target = nearestEnemy(state, p.x, p.y) || nearestEnemy(state, TREE.x, TREE.y);
   let moveX = 0;
@@ -50,7 +50,7 @@ function pilotIntent(state, tired, stepCount) {
     const ta = Math.atan2(ty - target.y, tx - target.x);
     aimX = target.x + Math.cos(ta) * target.speed * 0.45;
     aimY = target.y + Math.sin(ta) * target.speed * 0.45;
-    firing = Math.hypot(target.x - p.x, target.y - p.y) < 620;
+    firing = Math.hypot(target.x - p.x, target.y - p.y) < range;
     const closeThreat = state.enemies.some((e) => Math.hypot(e.x - p.x, e.y - p.y) < 74);
     dash = closeThreat && p.dashCd <= 0;
     if (dash) {
@@ -104,18 +104,26 @@ export function stageShot(name, world) {
   }
 
   if (name === 'play') {
-    for (let i = 0; i < 110 / STEP; i += 1) {
-      world.step(STEP, pilotIntent(state, false, i));
+    // A close-range pilot for this scene: he lets the gloom gather into a ring around the
+    // Tree before it burns, so the frame shows the fight at its thickest. The late waves
+    // are where the field truly crowds, so the scene plays through to them.
+    for (let i = 0; i < 320 / STEP; i += 1) {
+      world.step(STEP, pilotIntent(state, false, i, 380));
       takeGifts(world);
       if (state.phase !== 'playing') break;
-      if (state.wave >= 4 && state.enemies.length >= 4 && state.wavePhase === 'wave') break;
+      // Stop on a busy frame: a thick swarm, or a brute on the field with company.
+      const bruteOut = state.enemies.some((e) => e.kind === 'brute');
+      if (state.wavePhase === 'wave' && ((state.wave >= 7 && state.enemies.length >= 10) || (bruteOut && state.wave >= 5 && state.enemies.length >= 6))) break;
     }
     return { screen: SCREEN_PLAY, best: state.score };
   }
 
-  // end: the tired pilot loses the grove.
+  // end: the pilot fights well for the first stretch, then tires — no gifts taken, aim
+  // wandering, feet slowing — and the deepening night takes the grove, as it does a player
+  // who stops growing. The run is real throughout; only the pilot's care fades.
+  const TIRE_AT = 75 / STEP;
   for (let i = 0; i < 600 / STEP; i += 1) {
-    world.step(STEP, pilotIntent(state, true, i));
+    world.step(STEP, pilotIntent(state, i >= TIRE_AT, i));
     if (state.phase !== 'playing') break;
   }
   return { screen: state.phase === 'over' ? SCREEN_OVER : SCREEN_PLAY, best: state.score };
