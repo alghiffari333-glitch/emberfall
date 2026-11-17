@@ -3,7 +3,7 @@
 // drawn with canvas shapes — the warden is a small hooded figure of light, the Heart Tree a
 // trunk with a breathing canopy, the gloom's creatures winged silhouettes — no images at all.
 
-import { COLORS, FIELD, FONT, PLAYER, TREE, WAVES_TOTAL } from './config.js';
+import { COLORS, FIELD, FONT, PLAYER, TOUCH, TREE, WAVES_TOTAL } from './config.js';
 
 export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
@@ -424,7 +424,61 @@ export function createRenderer(canvas) {
     return y + lines.length * 26;
   }
 
-  function draw(state, screen, best, t, muted) {
+  /** The touch controls, drawn over the fight: the two fixed buttons, and each stick where
+   *  its thumb rests (a base ring where it landed, a knob where it has dragged to). */
+  function drawTouchControls(state, touch) {
+    const p = state.player;
+    // Dash button.
+    const ready = p.dashCd <= 0;
+    ctx.beginPath();
+    ctx.arc(TOUCH.dashX, TOUCH.dashY, TOUCH.dashR, 0, TAU);
+    ctx.fillStyle = touch.dash ? 'rgba(255,150,70,0.55)' : ready ? 'rgba(255,150,70,0.28)' : 'rgba(90,100,150,0.22)';
+    ctx.fill();
+    ctx.strokeStyle = ready ? 'rgba(255,179,71,0.8)' : 'rgba(120,130,170,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `700 13px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('DASH', TOUCH.dashX, TOUCH.dashY + 1);
+    // Pause button.
+    ctx.beginPath();
+    ctx.arc(TOUCH.pauseX, TOUCH.pauseY, TOUCH.pauseR, 0, TAU);
+    ctx.fillStyle = 'rgba(20,28,60,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(140,155,210,0.6)';
+    ctx.stroke();
+    ctx.fillStyle = COLORS.text;
+    ctx.fillRect(TOUCH.pauseX - 7, TOUCH.pauseY - 8, 5, 16);
+    ctx.fillRect(TOUCH.pauseX + 2, TOUCH.pauseY - 8, 5, 16);
+    // Sticks.
+    for (const [stick, color] of [[touch.move, '#8fb7ff'], [touch.aim, COLORS.ember]]) {
+      if (!stick) continue;
+      const dx = stick.x - stick.ox;
+      const dy = stick.y - stick.oy;
+      const len = Math.hypot(dx, dy);
+      const cl = Math.min(len, TOUCH.stickRadius);
+      const kx = len > 0 ? stick.ox + (dx / len) * cl : stick.ox;
+      const ky = len > 0 ? stick.oy + (dy / len) * cl : stick.oy;
+      ctx.beginPath();
+      ctx.arc(stick.ox, stick.oy, TOUCH.stickRadius, 0, TAU);
+      ctx.fillStyle = 'rgba(16,22,48,0.35)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(160,175,225,0.45)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(kx, ky, 25, 0, TAU);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.55;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function draw(state, screen, best, t, muted, touch) {
     resize();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = COLORS.night;
@@ -437,6 +491,7 @@ export function createRenderer(canvas) {
     drawWorld(state, t);
     if (screen !== SCREEN_TITLE) drawHud(state, best, muted);
     if (screen === SCREEN_PLAY || screen === SCREEN_UPGRADE) drawBanner(state);
+    if (touch && touch.active && screen === SCREEN_PLAY) drawTouchControls(state, touch);
 
     if (screen === SCREEN_TITLE) {
       ctx.fillStyle = 'rgba(5,7,18,0.45)';
@@ -451,20 +506,38 @@ export function createRenderer(canvas) {
       ctx.font = `500 19px ${FONT}`;
       ctx.fillStyle = COLORS.textDim;
       ctx.fillText('Ten waves of gloom. One Heart Tree. Hold the grove until dawn.', FIELD.width / 2, 258);
-      const lines = [
-        'Move — W A S D or arrow keys',
-        'Aim — mouse · Hold click (or F) — loose ember bolts',
-        'Space / Shift — dash through danger',
-        'Gather ember shards, level up, choose your gifts',
-        'If the warden falls, or the Tree falls, the night wins',
-      ];
+      const lines = touch && touch.active
+        ? [
+            'Left thumb — move',
+            'Right thumb — aim · push it to loose ember bolts',
+            'DASH button — dash through danger',
+            'Gather ember shards, level up, choose your gifts',
+            'If the warden falls, or the Tree falls, the night wins',
+          ]
+        : [
+            'Move — W A S D or arrow keys',
+            'Aim — mouse · Hold click (or F) — loose ember bolts',
+            'Space / Shift — dash through danger',
+            'Gather ember shards, level up, choose your gifts',
+            'If the warden falls, or the Tree falls, the night wins',
+          ];
       ctx.font = `500 16px ${FONT}`;
       ctx.fillStyle = COLORS.text;
       lines.forEach((line, i) => ctx.fillText(line, FIELD.width / 2, 316 + i * 27));
       button('start', FIELD.width / 2 - 130, 486, 260, 54, 'Begin the vigil', true);
       ctx.font = `500 14px ${FONT}`;
       ctx.fillStyle = COLORS.textDim;
-      ctx.fillText(best > 0 ? `Best score so far: ${best} · or press Enter` : 'or press Enter', FIELD.width / 2, 574);
+      ctx.fillText(
+        touch && touch.active
+          ? best > 0
+            ? `Best score so far: ${best}`
+            : 'Tap the button to begin'
+          : best > 0
+            ? `Best score so far: ${best} · or press Enter`
+            : 'or press Enter',
+        FIELD.width / 2,
+        574,
+      );
     } else if (screen === SCREEN_UPGRADE) {
       const box = panel(880, 300);
       ctx.textAlign = 'center';
@@ -473,7 +546,7 @@ export function createRenderer(canvas) {
       ctx.fillText('The ember grows', FIELD.width / 2, box.y + 52);
       ctx.font = `500 15px ${FONT}`;
       ctx.fillStyle = COLORS.textDim;
-      ctx.fillText(`Level ${state.level} — choose a gift (click, or press 1 · 2 · 3)`, FIELD.width / 2, box.y + 82);
+      ctx.fillText(`Level ${state.level} — choose a gift (${touch && touch.active ? 'tap a card' : 'click, or press 1 · 2 · 3'})`, FIELD.width / 2, box.y + 82);
       state.choices.forEach((choice, i) => {
         const w = 256;
         const h = 150;
@@ -517,7 +590,7 @@ export function createRenderer(canvas) {
       ctx.font = `500 15px ${FONT}`;
       ctx.fillStyle = COLORS.textDim;
       ctx.fillText('The night waits with you.', FIELD.width / 2, box.y + 96);
-      button('resume', FIELD.width / 2 - 110, box.y + 122, 220, 48, 'Resume (P)', true);
+      button('resume', FIELD.width / 2 - 110, box.y + 122, 220, 48, touch && touch.active ? 'Resume' : 'Resume (P)', true);
     } else if (screen === SCREEN_OVER) {
       const box = panel(560, 430);
       ctx.textAlign = 'center';
@@ -531,7 +604,7 @@ export function createRenderer(canvas) {
       ctx.fillStyle = COLORS.textDim;
       ctx.font = `500 14px ${FONT}`;
       ctx.fillText(`Best ${Math.max(best, state.score)}`, FIELD.width / 2, endY + 12);
-      button('restart', FIELD.width / 2 - 120, box.y + box.h - 84, 240, 52, 'Try again (R)', true);
+      button('restart', FIELD.width / 2 - 120, box.y + box.h - 84, 240, 52, touch && touch.active ? 'Try again' : 'Try again (R)', true);
     } else if (screen === SCREEN_WIN) {
       const box = panel(560, 446);
       ctx.textAlign = 'center';
@@ -545,7 +618,7 @@ export function createRenderer(canvas) {
       ctx.fillStyle = COLORS.textDim;
       ctx.font = `500 14px ${FONT}`;
       ctx.fillText(`Survival bonus included · Best ${Math.max(best, state.score)}`, FIELD.width / 2, endY + 12);
-      button('restart', FIELD.width / 2 - 120, box.y + box.h - 84, 240, 52, 'New night (R)', true);
+      button('restart', FIELD.width / 2 - 120, box.y + box.h - 84, 240, 52, touch && touch.active ? 'New night' : 'New night (R)', true);
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }

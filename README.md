@@ -26,6 +26,9 @@ server). There is no build step and the game makes no network requests.
 | Mouse | Aim |
 | Hold left mouse button (or F) | Loose ember bolts |
 | Space / Shift | Dash (briefly untouchable) |
+| Left thumb stick (touch) | Move |
+| Right thumb stick (touch) | Aim — push it to loose ember bolts |
+| DASH button (touch) | Dash |
 | 1 · 2 · 3 or click | Choose a level-up gift |
 | P / Esc | Pause |
 | M | Mute |

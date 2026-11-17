@@ -31,6 +31,19 @@ export const TREE = {
 
 export const WAVES_TOTAL = 10;
 
+/** Touch controls (field coordinates): twin sticks anywhere on each half of the field, plus
+ *  two fixed buttons. The input layer hit-tests these and the renderer draws them, so the
+ *  numbers live here where both can share them. */
+export const TOUCH = {
+  stickRadius: 62, // how far a thumb drags before the stick is at full tilt
+  dashX: 1180,
+  dashY: 536,
+  dashR: 42,
+  pauseX: 1232,
+  pauseY: 112,
+  pauseR: 22,
+};
+
 /** How many creatures a wave sends, and how fast they arrive. */
 export function wavePlan(wave) {
   return {

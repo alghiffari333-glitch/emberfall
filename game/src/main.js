@@ -48,6 +48,8 @@ const status = document.getElementById('status');
 const audio = createAudio();
 const input = createInput(canvas);
 const renderer = createRenderer(canvas);
+input.setMapper((x, y) => renderer.toField(x, y));
+const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 const world = createWorld(createRandom(seed));
 const state = world.state;
 
@@ -201,7 +203,7 @@ if (shot !== null) {
       acc += dt;
       while (acc >= STEP) {
         acc -= STEP;
-        const events = world.step(STEP, input.intent(renderer.toField));
+        const events = world.step(STEP, input.intent(renderer.toField, state.player));
         react(events);
         if (state.phase === 'over') {
           saveBest();
@@ -224,7 +226,7 @@ if (shot !== null) {
       // Screens other than play still let particles and banners settle.
       if (screen === SCREEN_TITLE) world.step(STEP, { moveX: 0, moveY: 0, aimX: state.player.x, aimY: 0, firing: false, dash: false });
     }
-    renderer.draw(state, screen, best, now / 1000, audio.muted);
+    renderer.draw(state, screen, best, now / 1000, audio.muted, input.touchUI(coarsePointer));
   };
   requestAnimationFrame(frame);
 }
@@ -232,3 +234,6 @@ if (shot !== null) {
 // The first gesture anywhere opens the audio context, as browsers require.
 window.addEventListener('pointerdown', () => audio.ensure(), { once: false });
 window.addEventListener('keydown', () => audio.ensure(), { once: false });
+
+// A small handle for automated playtests (and curious players in the console).
+window.__emberfall = { world, get screen() { return screen; } };
