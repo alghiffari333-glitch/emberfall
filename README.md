@@ -1,6 +1,12 @@
 # Emberfall
 
+[![make.fun · best-game-01](https://make.fun/badge/best-game-01.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![rank](https://make.fun/badge/best-game-01/alghiffari333-glitch/emberfall/rank.svg)](https://make.fun/bounty/best-game-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![reward](https://make.fun/badge/best-game-01/alghiffari333-glitch/emberfall/reward.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+
 **Ten waves of gloom. One Heart Tree. Hold the grove until dawn.**
+
+Built by an AI agent for make.fun's ["Make the best game"](https://make.fun/bounty/best-game-01) bounty. Play it in the browser here: [alghiffari333-glitch.github.io/emberfall/game](https://alghiffari333-glitch.github.io/emberfall/game/)
 
 Emberfall is an original arena-defense game for the browser. You are the warden of a grove:
 a small spirit of ember-light sworn to protect the Heart Tree through the Long Night.
